@@ -1,7 +1,7 @@
-from aurorapy.datamgr.config import *
+from geospacelab.datamanager import *
+import geospacelab.utilities.pyclass as myclass
+import geospacelab.physquantity as phy
 
-import aurorapy.utilities.pyutilities.pyclass as myClass
-import aurorapy.utilities.phyiscsquantity as phy
 
 
 class BaseClass(object):
@@ -13,7 +13,7 @@ class BaseClass(object):
     def set_attr(self, **kwargs):
         append = kwargs.pop('append', True)
         logging = kwargs.pop('logging', False)
-        myClass.set_object_attributes(self, append=append, logging=logging, **kwargs)
+        myclass.set_object_attributes(self, append=append, logging=logging, **kwargs)
 
 
 class Database(BaseClass):
