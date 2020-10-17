@@ -1,2 +1,2 @@
 # geospacelab
-To manage, analyze, and visualize the geospace data
+To manage, visualize, and analyze the geospace data
