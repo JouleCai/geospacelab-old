@@ -1,5 +1,5 @@
-import aurorapy.utilities.pyutilities.pylogging as mylog
-import aurorapy.utilities.pyutilities.pybasic as myBasic
+import geospacelab.utilities.pylogging as mylog
+import geospacelab.utilities.pybasic as mybasic
 
 
 def set_object_attributes(obj, *args, **kwargs):
@@ -16,15 +16,15 @@ def set_object_attributes(obj, *args, **kwargs):
         if not hasattr(obj, key):
             if not append:
                 mylog.StreamLogger.warning("Object %s: '%s' is not found in the named attributes!",
-                                           myBasic.retrieve_name(obj), key)
+                                           mybasic.retrieve_name(obj), key)
                 append_rec = 1
                 continue
 
         setattr(obj, key, value)
         if logging:
-            mylog.simpleinfo.info("Object %s: The attribute '%s' is added!", myBasic.retrieve_name(obj), key)
+            mylog.simpleinfo.info("Object %s: The attribute '%s' is added!", mybasic.retrieve_name(obj), key)
     if append_rec:
-        mylog.simpleinfo.info("Object %s: To add the new attribute, set append=True", myBasic.retrieve_name(obj))
+        mylog.simpleinfo.info("Object %s: To add the new attribute, set append=True", mybasic.retrieve_name(obj))
 
 
 def get_object_attributes(obj):

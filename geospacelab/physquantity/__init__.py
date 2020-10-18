@@ -1,4 +1,5 @@
-import aurorapy.utilities.pyutilities.pybasic as pybasic
+from geospacelab.physquantity import *
+import geospacelab.utilities.pybasic as pybasic
 
 
 def default():
@@ -29,6 +30,19 @@ def default():
     )
 
     return quantities
+
+
+def search_quantity(name, unit_category):
+    return
+
+
+def quantity(**kwargs):
+    name = kwargs.pop('name', '')
+    if name is None:
+        return
+    unit_category = kwargs.pop('unit_category', 'SI')  # 'SI' or 'Gaussian'
+    pq = search_quantity(name, unit_category)
+    return pq
 
 
 class Quantity(object):

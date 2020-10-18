@@ -1,14 +1,36 @@
 from geospacelab.datamanager import *
 import geospacelab.utilities.pyclass as myclass
+import geospacelab.utilities.pybasic as mybasic
 import geospacelab.physquantity as phy
+from geospacelab.preferences import *
+
+import importlib
 
 
-
+# BaseClass with the "set_attr" method
 class BaseClass(object):
     def __init__(self, **kwargs):
         self.name = kwargs.pop('name', None)
         self.category = kwargs.pop('category', None)
         self.label = None
+
+    def label(self, fields=None, fields_ignore=None, separator='_', lowercase=True):
+        if fields_ignore is None:
+            fields_ignore = ['category', 'note']
+        sublabels = []
+        if fields is None:
+            attrs = myclass.get_object_attributes(self)
+            for attr, value in attrs.items():
+                if attr in fields_ignore:
+                    continue
+                if not isinstance(attr, str):
+                    continue
+                sublabels.append(value)
+        else:
+            for field in fields:
+                sublabels.append(getattr(self, field))
+        label = mybasic.str_join(sublabels, separator=separator, lowercase=lowercase)
+        return label
 
     def set_attr(self, **kwargs):
         append = kwargs.pop('append', True)
@@ -16,41 +38,62 @@ class BaseClass(object):
         myclass.set_object_attributes(self, append=append, logging=logging, **kwargs)
 
 
+# Class Database
 class Database(BaseClass):
-    def __init__(self, name='temporary', category='local'):
+    def __init__(self, name='temporary', category='local', **kwargs):
         self.name = name
         self.category = category
         super().__init__(name=self.name, category=self.category)
+        self.set_attr(logging=True, **kwargs)
 
-    def __repr__(self):
-        return self.name
+    def __str__(self):
+        return self.label()
 
 
+# Class Facility
 class Facility(BaseClass):
-    def __init__(self, name=None, category=None):
+    def __init__(self, name=None, category=None, **kwargs):
         self.name = name
         self.category = category
         super().__init__(name=self.name, category=self.category)
+        self.set_attr(logging=True, **kwargs)
 
-    def __repr__(self):
-        return self.name
+    def __str__(self):
+        return self.label()
 
 
+# Class Instrument
 class Instrument(BaseClass):
-    def __init__(self, name=None, category=None):
+    def __init__(self, name=None, category=None, **kwargs):
         self.name = name
         self.category = category
         super().__init__(name=self.name, category=self.category)
 
-    def __repr__(self):
-        return self.name
+    def __str__(self):
+        return self.label()
 
 
+# Class Experiment
+class Experiment(BaseClass):
+    def __init__(self, name=None, category=None, **kwargs):
+        self.name = name
+        self.category = category
+        super().__init__(name=self.name, category=self.category)
+        self.set_attr(logging=True, **kwargs)
+
+    def __str__(self):
+        return self.label()
+
+
+# create the Dataset class
 class Dataset(object):
     def __init__(self, **kwargs):
-        self.database = kwargs.pop('database', Database())
-        self.facility = kwargs.pop('facility', Facility())
-        self.instrument = kwargs.pop('instrument', Instrument())
+        self.database = Database(**kwargs.pop('database_opt', {'name': 'temporary', 'category': 'local'}))
+        self.facility = Facility(kwargs.pop('facility_opt', {}))
+        self.instrument = Instrument(kwargs.pop('instrument_opt', {}))
+        self.experiment = Experiment(kwargs.pop('experiment_opt', {}))
+        self.config_key = kwargs.pop('config_key', '')
+
         self.variables = {}
 
     def label(self):
@@ -60,141 +103,113 @@ class Dataset(object):
         return self.label()
 
 
+# Class DataManager
 class DataManager(object):
     def __init__(self, **kwargs):
         update = kwargs.pop('update', False)
         if update:
             self.update()
+
+        self.dt_fr = kwargs.pop('dt_fr', None)
+        self.dt_to = kwargs.pop('dt_to', None)
+
         self.datasets = {}
         self.variables = []
+        self.variable_opt_list = []
+        self.add_variables(kwargs.pop('variable_opt_list', []))
 
-    def add_variables(self, **kwargs):
-        variable_opts = kwargs.pop('var_opts')
-        for variable_opt in variable_opts:
-            variable
-        pass
+    def add_variables(self, variable_opt_list):
+        variable_opt_list: list
+        if not variable_opt_list:
+            return None
+
+        num_var = len(self.variable_opt_list)
+        for ind, var_opt in enumerate(variable_opt_list):
+            # set sequence number
+            num_var += 1
+            var_opt['No.'] = num_var
+            self.variable_opt_list.append(var_opt)
+            database = var_opt.pop('database', Database())
+            facility = var_opt.pop('facility', Facility())
+            instrument = var_opt.pop('instrument', Instrument())
+            experiment = var_opt.pop('experiment', Experiment())
+
+            if database.name == 'temporary':
+                base_phy_quantity = var_opt.pop('base_phy_quantity', None)
+                variable = Variable(base_phy_quantity=base_phy_quantity)
+                dataset = Dataset()
+            else:
+                # set config key
+                config_key = var_opt.pop('config_key', None)
+                if config_key is None:
+                    config_key = mybasic.str_join(
+                        database.name, facility.name, instrument.name, experiment.name
+                    )
+
+                # import the config module
+                module_name = mybasic.str_join(package_name, 'datamanager', 'config', config_key, separator='.')
+                module = importlib.import_module(module_name)
+                variable = module.config_variable(
+                    database=database, facility=facility, instrument=instrument, experiment=experiment, **var_opt)
+                if variable.dataset_key not in self.datasets.keys():
+                    dataset = module.assign_dataset(
+                        database=database, facility=facility, instrument=instrument, experiment=experiment)
+            self.variables.append(variable)
+            self.datasets[variable.dataset_key] = dataset
+
 
     def update(self):
-        print("Updating the data source records ...")
+        print("Updating the datasets and variables...")
         pass
-
-
-"""
-class DataSource(object):
-    def __init__(self, **kwargs):
-        self.database = kwargs.pop('database', None)
-        self.facility = kwargs.pop('facility', None)
-        self.facility_type = kwargs.pop('facility_type', None)
-        self.check_facility_type(**kwargs)
-
-        self.instrument = kwargs.pop('instrument', None)
-        self.instrument_type = kwargs.pop('instrument_type', None)
-        self.check_instrument_type(**kwargs)
-        self.notes = kwargs.pop('notes', None)
-        self.variables = {}
-
-    def check_facility_type(self, **kwargs):
-        if self.facility.category is None:
-            mylog.StreamLogger.warning("The facility type has not been declared! The default is 'spacecraft'")
-            self.facility_type = myBasic.input_with_default("Enter the facility type: ", 'spacecraft')
-        if self.facility_type == 'spacecraft':
-            self.set_attr('sat_ID', kwargs.pop('sat_ID', None), logging=False)
-        elif self.facility_type == 'ground-based':
-            self.set_attr('site_name', kwargs.pop('site_name', None), logging=False)
-            self.set_attr('site_loc', kwargs.pop('site_loc', None), logging=False)
-
-    def check_instrument_type(self, **kwargs):
-        self.instrument_type = kwargs.pop('instrument_type', self.instrument_type)
-        if self.instrument_type == 'ISR':
-            experiment = kwargs.pop('experiment', None)
-            pulse_code = kwargs.pop('pulse_code', None)
-            self.set_attr('experiment', experiment, 'pulse_code', pulse_code)
-        if self.instrument_type == 'FPI':
-            emission = kwargs.pop('emission', None)
-            self.set_attr('emission', emission)
-
-    def add_variable(self, var_name, **kwargs):
-        self.variables[var_name] = Variable(**kwargs)
-
-    def set_attr(self, *args, **kwargs):
-        append = kwargs.pop('append', True)
-        logging = kwargs.pop('logging', True)
-
-        myClass.set_object_attributes(self, *args, append=append, logging=logging, **kwargs)
-
-    def generate_label(self, fields=None):
-        sublabels = []
-        if fields is None:
-            attrs = myClass.get_object_attributes(self)
-            sublabels.append(self.database)
-            sublabels.append(self.facility)
-            sublabels.append(self.instrument)
-            if 'sat_ID' in attrs.keys():
-                sublabels.append(attrs['sat_ID'])
-            if 'site_name' in attrs.keys():
-                sublabels.append(attrs['site_name'])
-            for attr, value in attrs.items():
-                if attr in ['database', 'facility', 'instrument', 'facility_type',
-                            'instrument_type', 'sat_ID', 'site_name', 'site_loc', 'notes']:
-                    continue
-                if type(value) is not str:
-                    continue
-                sublabels.append(value)
-        else:
-            for field in fields:
-                sublabels.append(getattr(self, field))
-        label = myBasic.string_join(sublabels, separator='_', lowercase=True)
-        return label
-
-"""
 
 
 class Visual(object):
     def __init__(self, **kwargs):
         self.plottype = kwargs.pop('plottype', None)
-        self.xd = kwargs.pop('xd', None)
-        self.yd = kwargs.pop('yd', None)
-        self.zd = kwargs.pop('zd', None)
-        self.xd_scale = kwargs.pop('xd_scale', None)
-        self.yd_scale = kwargs.pop('yd_scale', None)
-        self.zd_scale = kwargs.pop('zd_scale', None)
-        self.xd_res = kwargs.pop('xd_res', None)
-        self.yd_res = kwargs.pop('yd_res', None)
-        self.zd_res = kwargs.pop('zd_res', None)
-        self.xd_err = kwargs.pop('xd_err', None)
-        self.yd_err = kwargs.pop('yd_err', None)
-        self.zd_err = kwargs.pop('zd_err', None)
-        # self.xdatamasks = None
-        # self.ydatamasks = None
-        # self.zdatamasks = None
-        self.xlim = kwargs.pop('xlim', None)
-        self.ylim = kwargs.pop('ylim', None)
-        self.zlim = kwargs.pop('zlim', None)
-        self.xlabel = kwargs.pop('xlabel', None)
-        self.ylabel = kwargs.pop('ylabel', None)
-        self.zlabel = kwargs.pop('zlabel', None)
-        self.xscale = kwargs.pop('xscale', None)
-        self.yscale = kwargs.pop('yscale', None)
-        self.zscale = kwargs.pop('zscale', None)
-        self.xunit = kwargs.pop('xunit', None)
-        self.yunit = kwargs.pop('yunit', None)
-        self.zunit = kwargs.pop('zunit', None)
-        self.xticks = kwargs.pop('xticks', None)
-        self.yticks = kwargs.pop('yticks', None)
-        self.zticks = kwargs.pop('zticks', None)
-        self.xticklabels = kwargs.pop('xticklabels', None)
-        self.yticklabels = kwargs.pop('yticklabels', None)
-        self.zticklabels = kwargs.pop('zticklabels', None)
+        self.xdata = kwargs.pop('xdata', None)
+        self.ydata = kwargs.pop('ydata', None)
+        self.zdata = kwargs.pop('zdata', None)
+        self.xdata_scale = kwargs.pop('xdata_scale', None)
+        self.ydata_scale = kwargs.pop('ydata_scale', None)
+        self.zdata_scale = kwargs.pop('zdata_scale', None)
+        self.xdata_res = kwargs.pop('xdata_res', None)
+        self.ydata_res = kwargs.pop('ydata_res', None)
+        self.zdata_res = kwargs.pop('zdata_res', None)
+        self.xdata_err = kwargs.pop('xdata_err', None)
+        self.ydata_err = kwargs.pop('ydata_err', None)
+        self.zdata_err = kwargs.pop('zdata_err', None)
+        self.xdata_mask = kwargs.pop('xdata_mask', None)
+        self.ydata_mask = kwargs.pop('ydata_mask', None)
+        self.zdata_mask = kwargs.pop('zdata_mask', None)
+        self.xaxis_lim = kwargs.pop('xaxis_lim', None)
+        self.yaxis_lim = kwargs.pop('yaxis_lim', None)
+        self.zaxis_lim = kwargs.pop('zaxis_lim', None)
+        self.xaxis_label = kwargs.pop('xaxis_label', None)
+        self.yaxis_label = kwargs.pop('yaxis_label', None)
+        self.zaxis_label = kwargs.pop('zaxis_label', None)
+        self.xaxis_scale = kwargs.pop('xaxis_scale', None)
+        self.yaxis_scale = kwargs.pop('yaxis_scale', None)
+        self.zaxis_scale = kwargs.pop('zaxis_scale', None)
+        self.xdata_unit = kwargs.pop('xdata_unit', None)
+        self.ydata_unit = kwargs.pop('ydata_unit', None)
+        self.zdata_unit = kwargs.pop('zdata_unit', None)
+        self.xaxis_ticks = kwargs.pop('xaxis_ticks', None)
+        self.yaxis_ticks = kwargs.pop('yaxis_ticks', None)
+        self.zaxis_ticks = kwargs.pop('zaxis_ticks', None)
+        self.xaxis_ticklabels = kwargs.pop('xaxis_ticklabels', None)
+        self.yaxis_ticklabels = kwargs.pop('yaxis_ticklabels', None)
+        self.zaxis_ticklabels = kwargs.pop('zaxis_ticklabels', None)
+
         self.colormap = kwargs.pop('colormap', None)
         self.visible = kwargs.pop('visible', True)
-        self.kwargs_draw = kwargs.pop('kwargs_draw', {})
+        self.kwargs_plot = kwargs.pop('kwargs_draw', {})
 
         self.set_attr(**kwargs)
 
     def set_attr(self, **kwargs):
         append = kwargs.pop('append', True)
         logging = kwargs.pop('logging', True)
-        myClass.set_object_attributes(self, append=append, logging=logging, **kwargs)
+        myclass.set_object_attributes(self, append=append, logging=logging, **kwargs)
 
 
 class Variable(BaseClass):
@@ -231,7 +246,4 @@ class Variable(BaseClass):
         self.label = self.base_phy_quantity.notation
 
 
-if __name__ == '__main__':
-    ds = DataSource(database='madrigal', facility='DMSP', sat_ID='F18', instrument='e')
-    ds.generate_label()
 
