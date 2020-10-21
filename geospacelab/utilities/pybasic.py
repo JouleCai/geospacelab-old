@@ -16,6 +16,34 @@ def dict_set_default(dict1, *args, **kwargs):
     return dict1
 
 
+def dict_print_tree(dict_in, level=0, max_level=None, value_repr=True, dict_repr=True):
+    if level == 0:
+        print("\x1b[0;31;40m" + retrieve_name(dict_in) + "\x1b[0m", end="")
+
+    try:
+        keys = dict_in.keys()
+    except AttributeError:
+        if value_repr:
+            print("\x1b[2;37;40m" + ": " + "\x1b[0m", end="")
+            print("\x1b[0;30;47m" + repr(dict_in) + "\x1b[0m")
+        else:
+            print("")
+        return None
+    if dict_repr:
+        print("\x1b[2;37;40m" + ": " + "\x1b[0m", end="")
+        print("\x1b[7;34;40m" + repr(dict_in) + "\x1b[0m", end="")
+    print("")
+    if max_level is not None:
+        if level >= max_level:
+            return None
+
+    for key in keys:
+        print("\x1b[2;37;40m" + "|---" * (level + 1) + "\x1b[0m", end="")
+        print("\x1b[1;33;40m" + key + "\x1b[0m", end="")
+        new_dict = dict_in[key]
+        dict_print_tree(new_dict, level+1, max_level=max_level, value_repr=value_repr, dict_repr=dict_repr)
+
+
 def retrieve_name(var):
     """
     Gets the name of var. Does it from the out most frame inner-wards.
