@@ -34,6 +34,6 @@ def show_metadata(filename, filepath='', fields=None):
 
 
 if __name__ == "__main__":
-    fn = "/home/leicai/01_work/00_data/madrigal/DMSP/20150908/dms_20150908_16e.001.hdf5"
+    fn = "/home/leicai/01_work/00_data/madrigal/DMSP/20150908/dms_20150908_16s1.001.hdf5"
     show_structure(fn)
     show_metadata(fn)

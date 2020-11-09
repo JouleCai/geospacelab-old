@@ -86,23 +86,27 @@ class Experiment(BaseClass):
 # create the Dataset class
 class Dataset(object):
     def __init__(self, **kwargs):
-        self.dir_data = kwargs.pop('dir_data', None)
+        self.data_path = kwargs.pop('data_path', None)
         self.dt_fr = kwargs.pop('dt_fr', None)
         self.dt_to = kwargs.pop('dt_to', None)
         self.database = kwargs.pop('database', Database(name='temporary', category='local'))
         self.facility = kwargs.pop('facility', Facility())
         self.instrument = kwargs.pop('instrument_opt', Instrument())
         self.experiment = kwargs.pop('experiment', Experiment())
-        self.variables = {}
-        self._visual = kwargs.pop('visual', False)
+        self.variables = None
+        self._visual = kwargs.pop('visual', True)
 
     def add_variable(self, varname, **kwargs):
+        opt_visual = kwargs.pop('opt_visual', {})
         self.variables[varname] = Variable(**kwargs)
         if self._visual:
-            visual_opt = kwargs.pop('visual_opt', {})
-            self.variables[varname].set_attr('visual', Visual(**visual_opt))
+            self.variables[varname].set_attr('visual', Visual(**opt_visual))
 
-    def assign_variable(self, **kwargs):
+    def assign_data(self, Loader, opt_Loader=None):
+        load_obj = Loader(opt_Loader)
+        self.variables
+
+    def pickup_variable(self, **kwargs):
         varname = kwargs.pop('varname', None)
         if varname in self.variables.keys():
             return self.variables[varname]

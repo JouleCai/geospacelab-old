@@ -1,3 +1,8 @@
+from pathlib import Path
+import numpy as np
+import os
+
 package_name = 'geospacelab'
-root_dir_data = "/home/leicai/01_work/00_data"
+
+rootpath_data = Path("/home/leicai/01_work/00_data")
 
